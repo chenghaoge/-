@@ -1,0 +1,80 @@
+rm (list = ls())   ##???毡???
+library(XML)    #??????页
+library(RCurl)  ##?????锟斤拷?
+library(stringr)  ##???????值?
+
+x<-NULL
+
+for(i in 1:18){
+  x[i]<-paste('http://www.yichenbank.com/invest/index.html?p=',i,sep='')
+}
+
+go<-function(url){
+  doc<-htmlParse(url,encoding='utf-8')
+  rootsNode<-xmlRoot(doc)
+  title<-xpathSApply(rootsNode,'//td/a',xmlValue)
+  title<-title[c(T,F,F)]
+  action<-title[c(T,F,F)]
+  lilv<-xpathSApply(rootsNode,'//td[@class="dengji"]',xmlValue)
+  action1<-lilv[c(F,T,T,T,F)]
+  lilv<-gsub('\\r|\\n| |\\t','',action1)
+  lilv1<-lilv[c(T,F,F)]
+  jinge<-lilv[c(F,T,F)]
+  qxian<-lilv[c(F,F,T)]
+  ##<a href=\"/invest/238.html\"title
+  text<-NULL
+  text<-getURL(url)
+  a<-str_extract_all(text,'<a href=\"(.*?)"title')[[1]]
+  url1<-substr(a,10,nchar(a)-6)
+  all_urls<-paste('www.yichenbank.com',url1,sep='')
+  data<-data.frame(title,lilv1,jinge,qxian,all_urls)
+  data
+}
+
+data1<-NULL
+
+for(i in 1:18){
+  data1<-rbind(data1,go(x[i]))
+}
+
+write.csv(data1,'Q:/biaodi.csv')
+
+
+##touziren
+
+all<-NULL
+m<-NULL
+
+invest_urls <-NULL
+for (i in 1:dim(data1)[1]){
+  pages1<-str_extract_all(data1$all_url[i],'\\d+')[[1]]
+  m<-getURL(data1$all_url[i])
+  
+  
+  pages<-str_extract_all(m,'鍏? (\\d+) 椤?')[[1]]
+  all_page_num <- str_extract(pages,'\\d+')[[1]]
+  for(i in 1:as.numeric(all_page_num)){
+    invest_url<-paste("http://www.yichenbank.com/invest/investRecord?borrow_id=",pages1,"&p=",i,sep="")
+    invest_urls <-c(invest_urls,invest_url)
+    }
+}
+
+
+get_invest <-function(url){
+  doc<-htmlParse(url,encoding='UTF-8')
+  rootnodes<-xmlRoot(doc)
+  x<-xpathSApply(rootnodes,'//td',xmlValue)
+  touzren<-x[c(T,F,F,F,F)]
+  leix<-x[c(F,T,F,F,F)]
+  jinge<-x[c(F,F,T,F,F)]
+  shij<-x[c(F,F,F,T,F)]
+  invests<-data.frame(touzren,leix,jinge,shij,url)
+  invests
+}
+
+all_invest<-NULL
+for (i in 1:length(invest_urls)){
+  all_invest <- rbind(all_invest,get_invest(invest_urls[i]))
+}
+
+write.csv(all_invest,'Q:/invests.csv')
